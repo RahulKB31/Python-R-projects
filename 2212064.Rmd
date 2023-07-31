@@ -1,0 +1,281 @@
+---
+title: "MA331-Report: 2212064"
+subtitle: "TED Talks by Speaker Chris	Kluwe and Speaker Louie	Schwartzberg"
+author: "Kithalamane Basavaraj, Rahul"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+### Don't delete this setup code chunk from your file
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, comment = NULL)   ## DON'T ALTER THIS: this is to prevent printing the code or any unnecessary addition in your final "html" report file.
+
+# You can extend this list below to load all the packages required for your analyses:
+#====================================================================================
+library(tidyverse)
+library(tidytext)
+library(dsEssex)
+library(ggrepel)
+library(dplyr)
+library(gridExtra)
+
+# load the 'ted_talks' data
+#=========================
+data(ted_talks)                                          # Loading of data
+dplyr::glimpse(ted_talks)
+MyData <- ted_talks %>% unnest_tokens(word, text)       # Seperatin words from text
+
+function(numerator, denominator, correction = TRUE){
+  if(correction){
+    ODDS_N = (numerator + 0.5) / (sum(numerator) - numerator + 0.5)
+    ODDS_D = (denominator + 0.5) / (sum(denominator) - denominator + 0.5)
+  } else {
+    ODDS_N = numerator / (sum(numerator) - numerator)
+    ODDS_D = denominator / (sum(denominator) - denominator)
+  }
+  return(OR = ODDS_N/ODDS_D)
+}
+
+
+```
+
+## Introduction
+
+The aim of this project report is to present and compare text analysis for the transcripts given by **TWO TED speakers**.  
+
+**Speaker 1**: Chris	Kluwe  
+**Speaker 2**: Louie	Schwartzberg  
+  
+Speaker 1: **Chris Kluwe** is a punter and an author who consistently sets team records. In 2014, he gave a TED Talk on How augmented reality will change sports and build empathy. In his talk he describes how the future of sports will look like with respect to technology and how in future the use of augmented reality will enhance people's experience with respect to sports. He gives a sense of what virtual reality and augmented reality (AR) is, explains how AR can collect data in real time and be used to enhance when we play the game.  
+  
+Speaker 2: **Louie	Schwartzberg** is a Filmmaker who has captured breath taking images of the universes rhythms, patterns and beauty. The speaker has given two TED Talks one in 2011 and the other in 2014. In 2011, he gave a TED Talk on The hidden beauty of pollination. He describes and films how essential the pollen and pollination is with respect to mother nature, reminds us that we dependent on them and all should work towards taking care of it. In 2014, he gave another TED Talk on the Hidden miracles of the natural world. In this he describes how technology, art and science can be brought together to make the invisible visible, which in turn expands and transforms our perception in the world we live.  
+  
+The report aims to investigate:  
+  
+1. Sentiment Analysis of two speakers.  
+2. Summaries and Word Counts for two speakers.  
+3. Comparisons between two speakers.  
+
+
+## Methods
+  
+The steps/procedures followed in this report are as follows:  
+  
+1. Loading of data from dsEssex package.  
+2. Data pre-processing by breaking apart text into individual tokens and arranging the data into a specific structure. 
+3. Data Cleaning by removing all stopwords that are NOT interesting for a text analysis.  
+4. Conducting statistical Analysis for both the speakers by doing word count, vocabularary comparison by persons, calculating odds ratio to measure the association between two words.  
+5. Analysis of data are presented in a visualization format using ggplot package.  
+6. Detailed analysis of the results.  
+
+
+## Results
+  
+
+**1.** Here we made a detailed analysis on the **summary of word count** for each individual speakers with respect to their TED Talk and our analysis shows that speaker 1: **Chris Kluwe** has the maximum number of words i.e, 1578. It also indicates that the talk given by him has been covered in broad range. We also found that Speaker 2: **Louie Schwartzberg** has given 2 TED Talks one in 2011 and 2014 and the TED talk he gave in 2014 (talk_id = 1969) has the maximum number of words i.e, 797 compared to 2011. Given below is the Visualization of total words for certain speakers:
+  
+
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center", fig.width=6,fig.height=3}
+a1 <- MyData %>% 
+filter(speaker %in% c("Chris Kluwe", "Louie Schwartzberg")) %>%        # keep only the words spoken by Chris Kluwe and Louie Schwartzberg
+count(speaker, sort = TRUE) %>%                                        # Count of words for each speaker
+slice_max(n, n = 20) %>%                                              
+mutate(speaker = reorder(speaker, n)) %>%                              # creating a column n with respect to speaker
+ggplot(aes(speaker, n)) + 
+labs(x = "Speakers", y = "Count of Words") + 
+geom_bar(stat = "identity",colour="black" , fill="steelblue") + 
+geom_text(aes(label = n), position = "identity", size = 5, color ="black", vjust=2) + 
+scale_fill_grey()                                                     # plotting using ggplot and visualizing through bar plot
+
+a2 <- MyData  %>% 
+filter(speaker == "Louie Schwartzberg" & talk_id %in% c("1140", "1969")) %>%   # Keeping words by filtering our the talk_ids for Louie Schwartzberg
+count(talk_id, sort = TRUE) %>%                                     # count of words in each ids
+slice_max(n, n = 20) %>%         
+mutate(talk_id = reorder(talk_id, n)) %>%                           # creating a column n with respect to talk_ids
+ggplot(aes(talk_id, n)) +
+labs(x = "Louie Schwartzberg 2 Talks", y = "") +
+geom_bar(stat = "identity",colour="black" , fill= "steelblue") + 
+geom_text(aes(label = n), position = "identity", size = 5, color ="black", vjust=2) + 
+scale_fill_grey()                                                   # plotting using ggplot and visualizing through bar plot
+
+grid.arrange(a1, a2, ncol = 2, top = "Visualisation of total words for each speakers")
+```
+  
+  
+**2.** In this analysis we found the **words used maximum number of times** after removal of stop words, by Speaker 1: Chris Kluwe and Speaker 2: Louie Schwartzberg for the maximum number of times in their TED Talk. We made the analysis and found that the word - **can** is used the maximum number of times by both speaker word counts combined. In overall, the TED Talks given by both speakers suggests a positive attitude towards the topic. Given below is the Visualization of top words for both speakers.  
+  
+    
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, fig.align="center", fig.width=5,fig.height=3}
+MyData %>%
+  filter(speaker %in% c("Chris Kluwe", "Louie Schwartzberg")) %>%     # keep only the words spoken by Chris Kluwe and Louie Schwartzberg
+  anti_join(get_stopwords()) %>%                                 # remove stop words
+  count(speaker, word) %>%                                       # count with respect to two arguments
+  group_by(word) %>%                                             # group data by word
+  filter(sum(n) > 10) %>%                                        # filter by sum of the frequencies within each group
+  ungroup() %>%                                                  # Ungroup
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = speaker)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = "Word Counts", y = "Words") + 
+  geom_text(aes(label = n), position = "identity", size = 1.8, color ="black", hjust = 2) +  
+  ggtitle("Visualisation of top words for each speakers") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  facet_wrap(~speaker, ncol = 2, scales = "free")             # plotting using ggplot and visualizing through bar plot
+```
+
+  
+  
+**3.** In this analysis we have **compared** speaker words, found similarities and differences in them. We identified that the common areas of overlapping in their talks were in the positive note. We also identified certain cloud of words in each of their talks, this indicated that these words were frequently occurring and findings show that the TED talk given by the speakers covered around them only. Given below is the graph of comparing speaker words using visualization:
+  
+  
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, fig.align="center", fig.width=7, fig.height=3}
+MyData %>%
+  filter(speaker %in% c("Chris Kluwe", "Louie Schwartzberg")) %>%         # keep only the words spoken by Chris Kluwe and Louie Schwartzberg
+  anti_join(get_stopwords()) %>%                                          # removal of stop words
+  count(speaker, word) %>%                                                # Count words with respect to each speaker
+  group_by(word) %>%                                                      # group by word
+  filter(sum(n) > 5) %>%
+  ungroup() %>%
+  pivot_wider(names_from = "speaker", values_from = "n", values_fill = 0) %>%       
+  ggplot(aes(`Chris Kluwe`, `Louie Schwartzberg`)) +
+  geom_abline(color = "red", size = 1.2, alpha = 0.8, lty = 2) +
+  # use the special ggrepel geom for nicer text plotting
+  geom_text_repel(aes(label = word), max.overlaps = 25) + 
+  ggtitle("Comparing speaker words using visualisation") +
+  theme(plot.title = element_text(hjust = 0.5))                          # Plotting ussing ggplot
+```
+  
+  
+**4.** In this analysis we identified the emotional tone through the **percentage** of positive and negative words in their TED Talks. Speaker 2: **Louie Schwartzberg** has got higher percentage of positive words i.e, 63.04%  which is indicating how optimistic he is if people start to care for mother nature. But when compared to Speaker 2, Speaker 1: **Chris Kluwe** has got 55% of positive words, which is only 5% more than the half way mark, this concludes that his Talk was neither too optimistic nor too pessimistic about how the future of sports will look like with respect to technology. But he indicates a sense of positivity its going to happen in near future. Given below is the graph of Percentage Sentiment Analysis:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, fig.align="center", fig.width=6,fig.height=3}
+p1 <- MyData %>%
+  filter(speaker == "Louie Schwartzberg") %>%                         # keep only the words spoken by Louie Schwartzberg
+  anti_join(get_stopwords()) %>%                                      # removal of stop words
+  count(word, sort = TRUE) %>%                                        # count of words
+  inner_join(get_sentiments("bing")) %>%                              # getting sentiment for each word
+  count(sentiment) %>%                                                # count of sentiments
+  mutate(total = sum(n), percent = (n / total)*100) %>%               
+  filter(sentiment %in% c("positive", "negative")) %>%                #filtering of sentimens only through positive and negative
+  arrange(desc(percent)) %>%                                          # arrange it in descending percentages
+  ggplot(aes(sentiment, percent)) +  
+  labs(x = "Louie Schwartzberg", y = "Percentage") +
+  geom_bar(stat = "identity",colour="black" , fill="steelblue") + 
+  geom_text(aes(label = percent), position = "identity", size = 2.5, color ="black" , vjust=3) + 
+  scale_fill_grey()                                                 # plotting using ggplot and visualizing through bar plot
+  
+p2 <- MyData %>%
+  filter(speaker == "Chris Kluwe") %>%                          # keep only the words spoken by Chris Kluwe
+  anti_join(get_stopwords()) %>%                                # removal of stop words
+  count(word, sort = TRUE) %>%                                  # count of words
+  inner_join(get_sentiments("bing")) %>%                        # getting sentiment for each word
+  count(sentiment) %>%                                          # count of sentiments
+  mutate(total = sum(n), percent = (n / total)*100) %>%         
+  filter(sentiment %in% c("positive", "negative")) %>%         # filter the results for only positive and negative sentiment
+  arrange(desc(percent)) %>%                                   # arrange it in descending percentages
+  ggplot(aes(sentiment, percent)) +  
+  labs(x = "Chris Kluwe", y = "") +
+  geom_bar(stat = "identity",colour="black" , fill="indianred3") + 
+  geom_text(aes(label = percent), position = "identity", size = 2.5, color ="black" , vjust=3) + 
+  scale_fill_grey()                                            # plotting using ggplot and visualizing through bar plot
+
+grid.arrange(p1, p2, ncol = 2, top = "Percentage Sentiment Analysis ")
+
+```
+  
+
+**5.** In our analysis here we present the graphical representation of **odds ratio summary** statistic.Positive OR ratio indicates sentiments are expressed towards Speaker 1: **Chris kluwe** and negative OR indicates sentiments are expressed towards Speaker 2: **Louie Schwartzberg**. The sentiments expressed by audiences are shown in the table. We observe mostly both the speakers "Chris Kluwe" and "Louie Schwartzberg" have received positive sentiments from the audiences
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, fig.align="center", fig.width=7,fig.height=4}
+  
+MyData %>%
+  filter(speaker %in% c("Chris Kluwe", "Louie Schwartzberg")) %>%   # keep only the words spoken by Chris Kluwe and Louie Schwartzberg
+  anti_join(get_stopwords()) %>%                                    # removal of stop words
+  inner_join(get_sentiments("nrc"), by = "word") %>%                # getting sentiments from nrc
+  count(speaker, sentiment, sort = TRUE) %>%                        # count sentiments by each speaker
+  pivot_wider(names_from = speaker, values_from = n, values_fill = 0) %>% 
+  mutate(OR = compute_OR(`Chris Kluwe`, `Louie Schwartzberg`, correction = FALSE), 
+         log_OR = log(OR), sentiment = reorder(sentiment, log_OR)) %>%     # Calculating OR function
+  ggplot(aes(sentiment, log_OR, fill = log_OR < 0)) +        
+  geom_col(show.legend = FALSE) +
+  ylab("Log odds ratio") + ggtitle("The association between sentiments and speakers") +
+  coord_flip() + 
+  scale_fill_manual(name = "", values = c("steelblue", "red"))        # plotting using ggplot
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, fig.width=9,fig.height=4}
+MyData %>%
+  filter(speaker %in% c("Chris Kluwe", "Louie Schwartzberg")) %>%  # keep only the words spoken by Chris Kluwe and Louie Schwartzberg
+  anti_join(get_stopwords()) %>%                                   # removal of stop words
+  inner_join(get_sentiments("nrc"), by = "word") %>%               # getting sentiments from nrc
+  count(speaker, sentiment, sort = TRUE) %>%                       # count sentiments by each speaker
+  pivot_wider(names_from = speaker, values_from = n, values_fill = 0) %>% 
+  mutate(OR = compute_OR(`Chris Kluwe`, `Louie Schwartzberg`, correction = FALSE), 
+         log_OR = log(OR), sentiment = reorder(sentiment, log_OR))   # Calculating OR function
+```
+  
+**6.** In conclusion we did **Sentiment Analysis**, we are looking into the trends of the TED Talks given by both the speakers and analyzing them word by word. We found that Speaker 1: **Chris Kluwe** has got a decent positive trend which on deeper analysis indicates his enthusiasm in talking about sports to his fans. He has used the word **like** maximum number of times which suggest that he is trying to compare VR and AR in the use of sports. His other more mildly critical words in the trends indicate whether the technology is actually being used for what he intends it to be actually used for. With respect to speaker 2: **Louie Schwartzberg**, the trends note a lot of positives that are to the maximum, which also in a way indicates he is very enthusiastic about nature. His only negative note in the trend comes in when there are lapses and people can't experience, how the technology can do wonders. Given below is the graph of Sentiment Analysis along with the Sentiment Counts. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, fig.align="center", fig.width=7, fig.height=3}
+b1 <- MyData %>%
+  filter(speaker %in% "Chris Kluwe") %>%                     # keep only the words spoken by Chris Kluwe
+  anti_join(get_stopwords()) %>%                             # removal of stop words
+  count(word, sort = FALSE) %>%                              # count of words
+  inner_join(get_sentiments("bing")) %>%                     # getting sentiment for each word
+  group_by(sentiment) %>% 
+  mutate(new_integer = ifelse(sentiment == "positive", n, -n)) %>% 
+  ggplot(aes(word, new_integer, fill = sentiment)) +
+  labs(x = "Speaker 1: Chris Kluwe", y = "< Negative Positive > Words") +
+  geom_col(show.legend = FALSE) + 
+  theme(axis.text = element_blank(), axis.ticks = element_blank()) + 
+  scale_x_discrete(guide = guide_axis(angle = 90)) 
+
+b2 <- MyData %>%
+  filter(speaker %in% "Louie Schwartzberg") %>%                     # keep only the words spoken by Chris Kluwe
+  anti_join(get_stopwords()) %>%                             # removal of stop words
+  count(word, sort = FALSE) %>%                              # count of words
+  inner_join(get_sentiments("bing")) %>%                     # getting sentiment for each word
+  group_by(sentiment) %>% 
+  mutate(new_integer = ifelse(sentiment == "positive", n, -n)) %>% 
+  ggplot(aes(word, new_integer, fill = sentiment)) +
+  labs(x = "Speaker 2: Louie Schwartzberg", y = "") + 
+  geom_col() + 
+  theme(axis.text = element_blank(), axis.ticks = element_blank()) + 
+  scale_x_discrete(guide = guide_axis(angle = 90)) 
+
+grid.arrange(b1, b2, ncol=2, nrow = 2, heights=c(40,2), widths=c(4,4), top = "Sentiment Analysis")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, fig.align="center", fig.width=6, fig.height=3}
+t1 <- MyData %>%
+  filter(speaker %in% "Chris Kluwe") %>%                     # keep only the words spoken by Chris Kluwe
+  anti_join(get_stopwords()) %>%                             # removal of stop words
+  count(word, sort = FALSE) %>%                              # count of words
+  inner_join(get_sentiments("bing")) %>%                     # getting sentiment for each word
+  group_by(sentiment) %>%                                    # group by sentiment
+  slice_max(n, n=5) %>%                                     # Slicing of words above 10
+  mutate(word = reorder(word, n)) %>%
+  ungroup() %>% 
+  ggplot(aes(word, n, fill = sentiment)) +
+  labs(x = "Speaker 1: Chris Kluwe", y = "Word Counts") +
+  geom_col(show.legend = FALSE) + 
+  scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  facet_wrap(~sentiment, scales = "free")                   # plotting using ggplot and visualizing through bar plot
+
+t2 <- MyData %>%
+  filter(speaker %in% "Louie Schwartzberg") %>%                # keep only the words spoken by Louie Schwartzberg
+  anti_join(get_stopwords()) %>%                               # removal of stop words
+  count(word, sort = FALSE) %>%                                # count of words
+  inner_join(get_sentiments("bing")) %>%                       # getting sentiment for each word
+  group_by(sentiment) %>%                                      # group by sentiment
+  slice_max(n, n=3) %>%                                       # Slicing of words above 10
+  mutate(word = reorder(word, n)) %>%
+  ungroup() %>% 
+  ggplot(aes(word, n, fill = sentiment)) + 
+  labs(x = "Speaker 2:Louie Schwartzberg", y = "") + 
+  geom_col(show.legend = FALSE) +  
+  scale_x_discrete(guide = guide_axis(angle = 90)) + 
+  facet_wrap(~sentiment, scales = "free")                     # plotting using ggplot and visualizing through bar plot
+
+#grid.arrange(t1, t2, ncol=2, nrow = 2, heights=c(40,2), widths=c(4,4), top = "Sentiment Counts")
+```

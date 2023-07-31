@@ -1,0 +1,105 @@
+---
+title: "2212064"
+subtitle: "MA335 Lab Test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(faraway)
+```
+
+
+
+```{r, echo=TRUE, warning=FALSE}
+#1(a)
+setwd("m:/pc/downloads")
+#1(b)
+test <- read.csv("Real estate.csv",header=T)
+attach(test)
+head(test)
+```
+
+
+```{r, echo=TRUE, warning=FALSE}
+#1(c)
+price
+summary(price)
+```
+
+```{r, echo=TRUE, warning=FALSE}
+#1(d)
+dim(test)
+```
+From the below summary we can say that y = 46.53 -0.0072733x which means that for every decrease in the value of x the distance to the station increases by 46.53m. The value of P is  <2e-16 hence we can even reject null hypothesis. The R2 is 51.52% and adjusted R2 is 51.28 with a slight decrease.Hence we can that the predictor is s statistically significant at the 1% level.
+
+
+```{r, echo=TRUE, warning=FALSE}
+#2(a)
+model1 <- lm(price~MRT.station)
+summary(model1)
+```
+
+
+```{r, echo=TRUE, warning=FALSE}
+#2(b)
+plot(MRT.station,price, xlab = "Distance", ylab = "Price", main = "Scatter Plot")
+abline(model1, lwd=3, col="blue")
+```
+## 3
+From the below analysis, we see from the p-value which is smaller than < 2.2e − 16 that the null
+hypothesis is rejected, therefore we have evidence that model2 fits the data better. This is confirmed when
+we check the Adjusted R-squared which is 0.5128 for model1 and increases to 73.58% for model2. Also the
+Residual standard error from 9.431 for model1 reduces to 6.945 for model2. The F-statistics which decreases
+from 210.4 to 80.17 confirms the above conclusion, that model2 is better than model1.
+```{r, echo=TRUE, warning=FALSE}
+#3
+model_2 <- lm(price~date+age+MRT.station+stores+latitude+longitude+properties, data=test)
+model_2
+```
+
+```{r, echo=TRUE, warning=FALSE}
+#3
+summary(model_2)
+
+```
+
+```{r, echo=TRUE, warning=FALSE}
+#3
+summary(model1)
+
+```
+
+```{r, echo=TRUE, warning=FALSE}
+#3
+anova(model1, model_2)
+```
+##4
+
+Below is the correlation between various columns
+
+```{r, echo=TRUE}
+#4
+
+cor(test)
+
+```
+
+
+```{r, echo=TRUE}
+#5
+
+aov(price~as.factor(price))
+
+```
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,465 @@
+---
+title: "MA304-Report: 2212064"
+subtitle: "Report on Policing Dataset from Dallas, Texas in 2016"
+author: "Rahul Kithalamane Basavaraj"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, comment = NULL)   
+if(!is.null(dev.list())) dev.off()  # clear out the past 
+rm(list = ls())
+cat("\014")
+
+# Loading necessary libraries
+
+library(ggmap)
+library(shiny)
+library(leaflet)
+library(RColorBrewer)
+library(tidyverse)
+library(dplyr)
+library(leaflet.extras)
+library(lubridate)
+library(gridExtra)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggridges)
+library(viridis)
+
+
+setwd("C:/Users/Rahul/Desktop/MA304")   # set working directory
+
+data_dallas <-  read.csv("37-00049_UOF-P_2016_prepped.csv", na.strings = c(""))  # reading the data file
+
+data_dallas = data_dallas[-1,] # Remove the 1st row from data file
+
+data_dallas$INCIDENT_DATE <- as.Date(data_dallas$INCIDENT_DATE, format = "%m/%d/%Y")  # setting in required date format
+data_dallas$INCIDENT_DATE <- gsub("00","20",data_dallas$INCIDENT_DATE)   
+data_dallas$INCIDENT_DATE <- as.Date(data_dallas$INCIDENT_DATE, format = "%Y-%m-%d")
+data_dallas$INCIDENT_TIME <- format(strptime(data_dallas$INCIDENT_TIME, "%I:%M:%S %p"), "%H:%M:%S") # formating the time and 
+data_dallas$INCIDENT_MONTH <- months(as.Date(data_dallas$INCIDENT_DATE))   
+data_dallas$INC_MONTH <-format(data_dallas$INCIDENT_DATE,"%m")    # taking month into the seperate column
+data_dallas$INCIDENT_HOUR <- as.numeric(substr(data_dallas$INCIDENT_TIME, 0, 2)) # taking hour into the seperate column
+data_dallas$INCIDENT_DAY <- wday(data_dallas$INCIDENT_DATE, label=TRUE)
+data_dallas$INC_HOUR <- substr(data_dallas$INCIDENT_TIME, 0, 2)       # new column INC_HOUR
+data_dallas$INC_DATE <- substr(data_dallas$INCIDENT_DATE, 9, 10)      # new column INC_DATE
+
+# Dimenesion of the data
+
+dim(data_dallas)
+
+```
+
+
+### Introduction
+  
+  This is a data set containing **2383 rows and 47 columns**. On the outlook of the data set and on some research it indicates policing equity in 2016. The data indicates how crimes have taken place across the region. All the findings in the data set have been appropriated with right entities and each of their characteristics is clearly understandable in each of the circumstances along with their timings. By further doing some reading on the data set we find that the crimes are of **Dallas, Texas State**. The city is divided into 7 divisions and each place inside a city are identified by area, beat, sector, location_district, street number and street name. The police officers in the city respond to various crimes done by the subject according to their actions. The force used by the officers to respond to a crime depends on the offence done by the subject, reason for force and the subject description. Both the subject and the officers are of mixed races containing both male and females. The different races recorded in this city are **Black, Hispanic, White, Other, Asian and American Ind**. All the incidents are recorded by both date and time. It even records the injury caused to the officers while in pursuit. The experience level by these officers are of varying levels, it contains the young and the most experienced in the lot.  
+  
+### Data Analysis  
+  
+  Below we have derived a **table** representing the total number of crimes committed by each subject race. To arrive at this output we first filtered out the NULL values and then grouped the data by subject race column. Later I sorted the column in the decreasing order and then used the table function to output the data in the desired format. The output shows that the **Blacks** have committed the most number of crimes in the city totaling 1333, followed by **Hispanic** with 524 crimes and **Whites** committing 470 crimes in the city. The table shows that top 3 crimes committed are by Blacks, Hispanics and Whites and they all dominate in committing crimes in this city. The least number of crimes are committed by American Indians with only 1 recorded incident of committing crime. 
+  
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+
+# Creating a table to check the frequency of crimes committed by the subject for each race
+
+data_dallas %>% filter(SUBJECT_RACE!="NA" & SUBJECT_RACE!="NULL") %>%
+  group_by(SUBJECT_RACE) -> cn6         # Filtering the data column
+
+c <- as.data.frame(sort(table(cn6$SUBJECT_RACE),decreasing = TRUE)) # sorting the column
+#table 
+knitr::kable(c, col.names = c("Subject Race","Frequency"), caption = "Number of Offenses committed by each Subject Race")  
+
+```
+  Here we try to analyze the number of **officers injured in action** by means of a **two way table**. To arrive at this table I selected the columns along officer gender and officer injury. I then used the table function to get the desired output. The below output states that **31 female officers** and **203 male officers** were injured in action. The below data even states that females are in higher percentage of getting injured as compared to males. The number of non injured female officers are 209 and that of non injured male officers are 1940. Less injury also indicates that officers are well equipped and well trained to handle any of the cases.  
+  
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+
+# Creating a two way table for the number of officers injured
+
+m1 <- table(data_dallas$OFFICER_GENDER, data_dallas$OFFICER_INJURY, dnn = c("  Gender", " Officers Injured")) # Selecting the columns
+knitr::kable(m1, caption = "Number of Officers Injured in action")  # Creating a table
+
+```
+  
+  In this analysis we find that **white male** officers are in large numbers nearly about 1250 followed by Hispanic and black male officers. White and black female officers are the highest in this race distribution. In total **white male and female officers** are the ones present in large numbers in this region. The least count of officers are American Indians who are very negligible but that number is in high proportion to the crimes done by American Indians.  
+  
+ 
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+# creating a bar plot to check the officer race distribution
+
+counts <- table(data_dallas$OFFICER_GENDER, data_dallas$OFFICER_RACE)   # creating a table
+barplot(counts, main="Officer Race Distribution", beside=TRUE, xlab="Race", ylab="Count", col=c("darkblue","red"), 
+        legend = rownames(counts), ylim=c(0,1800))   # barplot 
+
+
+```
+  
+  Looking into this analysis we find that **black male** subjects are in large numbers nearly about 1150 followed by Hispanic and white male subject. White and black female subjects are the highest in the race distribution of this city. In total **black male and female subjects** are the ones present in large numbers in this city. The least count of subjects are American Indians, Asians and others who are in very negligible number.  
+  
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+# creating a bar plot to check the Subject race distribution
+
+data_dallas %>% filter(SUBJECT_GENDER!="NULL" & SUBJECT_GENDER!="Unknown" & SUBJECT_RACE!="NULL") %>%
+  group_by(SUBJECT_GENDER,SUBJECT_RACE) -> counts1                #filtering the data
+counts1$SUBJECT_GENDER <- map_chr(counts1$SUBJECT_GENDER, toString)   # converting it to string
+counts1$SUBJECT_RACE <- map_chr(counts1$SUBJECT_RACE, toString)       # converting to string
+counts2 <- table(counts1$SUBJECT_GENDER, counts1$SUBJECT_RACE)        # creating a table
+
+barplot(counts2, main="Subject Race Distribution", beside=TRUE, xlab="Race", ylab="Count", col=c("darkblue","red"),          legend = rownames(counts), ylim=c(0,1500))    # barplot
+
+```
+  
+  Here I have analysed the crimes committed in Dallas division wise inside the **bar plot**. To arrive at this plot I created a data frame for the division column and then assigned the variables and frequency to the x and y axis inside ggplot. The analysis of bar plot indicates that **563** crimes are committed in the **central** division, followed by the crimes in **southeast** and **northeast** division, this bar plot is an indication that majority of the crimes taking place in Dallas are in the central part of the city.  
+  
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+# Creating a bar plot for Crimes in Dallas Division Wise
+
+as.data.frame(table(data_dallas$DIVISION)) %>% ggplot(aes(Var1, Freq)) + 
+  labs(title = "Crimes in Dallas Division Wise", x = "Divisions", y = "Count") + 
+  geom_bar(stat = "identity",colour="black" , fill="steelblue") + 
+  geom_text(aes(label = Freq), position = "identity", size = 5, color ="black", vjust=2) +   
+  scale_x_discrete(guide = guide_axis(angle = 45)) +
+  scale_fill_grey()  + 
+  theme(plot.title = element_text(size = 13, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 8)) + 
+  theme(axis.title.y = element_text(size = 13)) + 
+  theme(axis.title.x = element_text(size = 13))  # We used ggplot
+```
+  
+  Here we have analysed the data set on the column of **subject offence** where we created a **pie plot** to visualize the major offences done by the subject. It was found that top 5 offences in the table are  APOWW (Apprehension by Peace Officer Without Warrant), this was followed by No Arrest, Public Intoxication, Warrant/Hold and Assault/FV. Public Intoxication is the maximum number of times a subject has done an offence, out of all the offences done by the subject the maximum percentage of the subject offence is **7.60 %**. This also indicates how and why a crime of such a nature is happening and we can get the reasons behind these offences.
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+# Creating a pie plot to find top 5 offences
+ 
+library(RColorBrewer)       #importing RColorBrewer
+myPalette <- brewer.pal(5, "Set2")   # color palette
+d1 = sort(round(100*prop.table(table(data_dallas$SUBJECT_OFFENSE)),2),decreasing = TRUE)  # sorting the column subject offence in the table 
+pie(d1,labels=c("14.73 %","12.80 %","7.60 %","4.62 %","3.86 %"),cex=0.8, border="white", col=myPalette, 
+    main="Major Subject Offences") # creating a pieplot
+legend("topright", c("APOWW","No Arrest ","Public Intoxication","Warrant / Hold","Assault / FV"), cex = 0.7, fill = myPalette) # adding legends
+
+```
+  
+  Here we have analysed the data set on the column of **Officers Injury Type** where we created a **pie plot** to visualize the major injury suffered by the officers. It was found that officers 90.64 % of the time suffered **No injuries or visible** marks. Majority of the times officers suffered **Abrasion/Scrape**, this was followed by Laceration/Cut, Sprain/Strain and Redness/Swelling. Out of all the injuries suffered by the subject the maximum percentage of the Officers Injury Type is **3.06 %**. This also indicates the nature of attacks the subjects are going to inflict on the officers.  
+  
+  
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center",fig.height=8, fig.width=10}
+
+# Pie chart Officers injury type
+
+library(RColorBrewer)           #importing RColorBrewer
+myPalette <- brewer.pal(5, "Set2") # color palette
+d2 = sort(round(100*prop.table(table(data_dallas$OFFICER_INJURY_TYPE)),2),decreasing = TRUE)[1:5] # sorting the column OFFICER_INJURY_TYPE in the table 
+#sort(round( 100*prop.table(table(Reason)),2),decreasing=TRUE)
+#knitr::kable(d2, caption = "Top 5 offences", col.names = c("Injury Type","Frequency"))
+pie(d2,labels=c("No injuries noted or visible","Abrasion/Scrape","Laceration/Cut","Sprain/Strain ","Redness/Swelling"),cex=0.75, border="white", col=myPalette, 
+    main="Officers Injury Type") # creating a pieplot
+legend("topright", c("90.64 %","3.06 % ","0.59 %","0.59 %","0.59 %"), cex = 1, fill = myPalette) # adding legends
+```
+  
+  In this analysis we found the distribution of number of officers along their service years. On the basis of this **histogram** we find that maximum number of officers are present in the **0 - 10th** year of the service period. The 3rd year of the service term has more than **600** officers followed by **300** odd officers who are in their 8th year of the service period. The trend shows a maximum number of officers serving during the 1st few years and then a very steep decline in the number of officers. The histogram is left skewed. We can also say that average age of the officers is very young. This is very good for a force having such young officers, who can tackle crimes very effectively.
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+#Creating a histogram to find the number of officers years on force
+
+ggplot(data_dallas,aes(as.numeric(OFFICER_YEARS_ON_FORCE))) + 
+  labs(x = "Service Year", y = "Officers Count") + geom_histogram(bins=30) + 
+  ggtitle("Officers Year in Force") +
+  scale_fill_grey() + 
+  theme(plot.title = element_text(size = 13, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 8)) + 
+  theme(axis.title.y = element_text(size = 13)) + 
+  theme(axis.title.x = element_text(size = 13))        # histogram
+```
+  
+  Here is an analysis we conducted for the monthly **count of incidents** taking place in a visualization format i.e, **box plot**. We find that maximum mean of incident count was found in the month of February. This means maximum incidents occurred in the month of **February**. The least count of incidents was found in the month of **December**. The bottom and top lines of a box plot indicates minimum and maximum occurrences of an incident taking place in that month. The black line inside the box plot represents the median. The box plot here represents the range.  
+  
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+
+# Boxplot to Count of Incidents Monthly
+
+data_dallas_year <-  data_dallas %>%
+  group_by(INCIDENT_DATE,INCIDENT_MONTH,INCIDENT_DAY, INC_MONTH) %>% # groupby 
+  summarize(count = n(), .groups = 'drop')  # summarize
+
+ggplot(data_dallas_year , aes(x = (INC_MONTH), y= count, fill = INCIDENT_MONTH)) +
+  geom_boxplot() +
+  labs(x= 'Incident Month',y = 'Count', title = paste("")) + 
+  scale_x_discrete(label=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")) + 
+  theme(legend.position="none") + 
+  ggtitle("Count of Incidents Monthly") + 
+  theme(plot.title = element_text(size = 13, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 10)) + 
+  theme(axis.title.y = element_text(size = 13)) + 
+  theme(axis.title.x = element_text(size = 13))     # ggplot
+
+```
+  
+  In this analysis we find a pattern of **Incident Rates** among 3 different races i.e, Black, Hispanic and White happening through the year. The incident day trends are captured for the entire year. For these trends we have drawn a **smoothing pattern** using geom_smooth. The trends show that Incident rates are decreasing among Blacks and Hispanics while for white the trends indicate its constant throughout the year. The analysis of trends in the current year helps us in the future prediction of Incident Rate **pattern**.  
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center", fig.width=10}
+# The use of smoothing to illustrate pattern/trend
+
+data_dallas   %>% 
+  filter(SUBJECT_RACE == "Black"  | SUBJECT_RACE == "White" | SUBJECT_RACE == "Hispanic" ) %>%   #filter race
+  group_by(INCIDENT_DATE,INC_MONTH,SUBJECT_RACE) %>%                      #groupby columns
+  summarize(count =n(), .groups = 'drop') -> data_dallas_dateh            # summary
+
+g1 <- ggplot(data_dallas_dateh , aes(x = INCIDENT_DATE, y= count)) +
+  geom_line(linewidth = 0.1, col="gray") +
+  geom_smooth(method = "lm", formula = y ~ x) + 
+  labs(x= 'Incident Date',y = 'Incident Rate', 
+  title = paste("Incident rate across Subject Race")) +
+  facet_wrap(~SUBJECT_RACE) + 
+  theme(plot.title = element_text(size = 16, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 10)) + 
+  theme(axis.title.y = element_text(size = 13)) + 
+  theme(axis.title.x = element_text(size = 13))      # ggplot
+g1
+
+```
+  
+  The analysis shows that the incidents concentration is higher during the first **3** hours and the last **8** hours inside this plot. This means that we can predict most of the incidents occurring during this time period. The least incidents are occurred in the **5th hour** to the **10th hour**. To control the incident rate during these peak hours we can put in more officers at this hour of a day. The rescheduling of duty hours of an officer can be done based on this **scatter plot** analysis.  
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+#SCATTER PLOT between INCIDENT_HOUR & INCIDENT_DATE
+ggplot(data_dallas, aes(INCIDENT_HOUR, INCIDENT_DATE)) + 
+         geom_point(na.rm = TRUE) + 
+  labs(x= 'Incident Hour',y = 'Incident Date', 
+  title = paste("Scatter Plot")) + 
+  theme(plot.title = element_text(size = 16, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 8)) + 
+  theme(axis.title.y = element_text(size = 13)) + 
+  theme(axis.title.x = element_text(size = 13))    #ggplot
+
+```
+  
+  The analysis of **Officer Race Distribution in Each Division** shows that maximum number of male and female officers are present in the central division. Earlier we had found out that maximum crimes happen in the central division, so to tackle the crimes in this division many officers are deployed. The maximum presence of officers indicates maximum likelihood crimes present in that region and minimum presence of officers indicates less crimes  in that division. By this **bar plot** we can say that Northwest is the region having the least presence of male and female officers. This might also mean very few crimes in that area.
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center", fig.width=15, fig.height=8}
+
+# Barplot
+
+data_dallas %>% filter(SUBJECT_GENDER!="NULL" & SUBJECT_GENDER!="Unknown") %>%
+  group_by(SUBJECT_GENDER,DIVISION) -> cn    # remove null and unknown values
+cn$SUBJECT_GENDER <- map_chr(cn$SUBJECT_GENDER, toString) # string conversion
+cn$DIVISION <- map_chr(cn$DIVISION, toString)     # string conversion
+cn2 <- table(cn$SUBJECT_GENDER, cn$DIVISION)     # table creation
+
+barplot(cn2, main="Officer Race Distribution in Each Division",
+        ylab="Count", col=c("darkblue","red"),
+        legend = rownames(counts), beside=TRUE, ylim=c(0,600), cex.names = 1, cex.lab=1.5, cex.main=2, cex.axis=1)
+#barplppot
+```
+  
+  The analysis here are classified based on different **subject description**. Here we bring in the top 10 descriptions on a subject in the form of a box plot. The subject on the top of the list is described as **mentally unstable**, then comes alcoholic, unknown drugs, alcohol and armed, marijuana, gun etc. The subject description tells us who are those kinds of persons who are likely to commit a crime. The officers based on this description can predict whether a crime is likely to be committed by such a subject.  It also informs the officers the likely extent to which the subject can go commit the crime.  
+  
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center", fig.width=18, fig.height=8}
+# Bar Plot Top 10 Subject Description in Dallas
+
+as.data.frame(head(sort(table(data_dallas$SUBJECT_DESCRIPTION), decreasing=TRUE), 10)) %>% 
+  ggplot(aes(Var1, Freq)) +
+  labs(x = "Subject", y = "Count") + 
+  geom_bar(stat = "identity",colour="black" , fill="orange")  +  
+  geom_text(aes(label = Freq), position = "identity", size = 6, color ="black", vjust=2) + 
+  ggtitle("Top 10 Subject Description")  + 
+  theme(plot.title = element_text(size = 17, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 13)) + 
+  theme(axis.title.y = element_text(size = 15)) + 
+  theme(axis.title.x = element_text(size = 15)) + 
+  scale_fill_grey()    # bar plot
+
+```
+  
+  This is a **line plot** which represents the maximum hiring month over the complete period. The analysis is done by formatting the month from the officer hire date. This is then grouped by for the complete period and summarized. The result of this analysis states that the maximum hiring period is in the month of **September** and the least number of officers hired is in the month of **February**. The other months of maximum hiring takes paces in March and June. By this data analysis we can say over which period the maximum officers will get **hired**.  
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+# Line plot Maximum hiring month over a period
+
+data_dallas$OFFICER_HIRE_DATE <- as.Date(data_dallas$OFFICER_HIRE_DATE, format = "%m/%d/%Y")  #date format
+data_dallas$OFFICER_HIRE_DATE <- gsub("00","20",data_dallas$OFFICER_HIRE_DATE)                #date substitution
+data_dallas$OFFICER_HIRE_DATE <- as.Date(data_dallas$OFFICER_HIRE_DATE, format = "%Y-%m-%d")
+data_dallas$OFFICER_HIRE_MONTH <- months(as.Date(data_dallas$OFFICER_HIRE_DATE))            
+data_dallas$OFFICER_MONTH <-format(data_dallas$OFFICER_HIRE_DATE,"%m")               #month format
+
+
+data_dallas_Officer_join_month <-  data_dallas %>%
+  group_by(OFFICER_MONTH) %>%                      # groupby officer month
+  summarize(count = n())                           # summarize
+
+ggplot(data_dallas_Officer_join_month, aes(x=OFFICER_MONTH, y =count, group=1)) + geom_line()  + 
+  geom_line( linewidth = 1.5,colour ="steelblue") + 
+  labs(x="Months", y= "Count", title="Maximum hiring month over a period") + 
+  scale_x_discrete(label=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")) + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(plot.title = element_text(size = 16, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 10)) + 
+  theme(axis.title.y = element_text(size = 13)) + 
+  theme(axis.title.x = element_text(size = 13))         # ggplot
+
+
+```
+  
+  This is a **time series plot** of crime rates hourly over the year. Here we use geom line to draw crime rates hourly. These lines are smoothed using geom smooth function. The trend line is created in blue. The line suggest slightly a downward trend over the period. It also indicates that maximum crime rates occur in the 5th - 10th and a decline shows a possible reduction of crime trends in the future. 
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+# Time series plot
+
+ggplot(data_dallas_year, aes(x = INCIDENT_DATE, y = count)) + 
+  geom_line(linewidth = 0.6,colour ="grey") +
+  scale_x_date(date_breaks = "2 month", date_labels = "%b %Y") +
+  geom_smooth(formula = y ~ x, method = "loess", se = FALSE) +
+  labs(x = "Year", y = "Crime Rate Hourly", title = "Time Series Plot of crime rates Hourly over the year") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(plot.title = element_text(size = 16, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 8)) + 
+  theme(axis.title.y = element_text(size = 13)) + 
+  theme(axis.title.x = element_text(size = 13))     ## ggplot
+
+```
+  
+  This is a **bar plot** which represents the number of officers **hospitalized** or not while conducting a pursuit. The hospitalization is least among the whites, blacks and Hispanics and is almost null with other races. While the officers are trying to use force, the likelihood of them getting hospitalized is very minimum. This can also state that the officers are well equipped and trained to handle all types of subjects. Here we are basing this bar plot on Officer race distribution and Officer Hospitalization.  
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center",fig.width=11, fig.height=8}
+
+counts3 <- table(data_dallas$OFFICER_HOSPITALIZATION, data_dallas$OFFICER_RACE)    #creating a table
+barplot(counts3, main= "Officer Hospitaization",font.main = 7, beside=TRUE, xlab="Officer Race", ylab="Count", col=c("darkblue","red"), 
+        legend = rownames(counts3), ylim=c(0,1500), cex.names = 1, cex.lab=1.5, cex.main=1.5, cex.axis =1)
+# bar plot
+
+```
+  
+  
+  The output shows a **Pearson's product-moment correlation test** between the variables location district and Street Number. The correlation co-eff value is **0.2832064** which means they are moderately correlated. This also means that if the location is changed the street number also changes. Since the correlation value is positive it is a positive correlation. The 95 percent confidence interval lies in the range of **0.2458484 to 0.3197243**.
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center", options(warn=-1)}
+# Create a correlation plot using ggplot2
+
+ab <- c("D14", "D9", "D6", "D11", "D7", "D9", "D14", "D6", "D14", "D12", "D9", "D9", "D7", "D10", "D10", "D10", "D9", "D14", "D8", "D10", "D10")
+
+districts <- c("D1" = 1, "D2" = 2, "D3" = 3, "D4" = 4, "D5" = 5, "D6" = 6, "D7" = 7, "D8" = 8, "D9" = 9, "D10" = 10, "D11" = 11, "D12" = 12, "D13" = 13, "D14" = 14)
+
+data_dallas$LOCATION_DISTRICT <- match(data_dallas$LOCATION_DISTRICT, names(districts))   # matching columns
+
+data_dallas$LOCATION_DISTRICT <- as.numeric(data_dallas$LOCATION_DISTRICT) # converting to numeric
+data_dallas$STREET_NUMBER <- as.numeric(data_dallas$STREET_NUMBER)        # converting to numeric
+
+abcd <- data.frame(data_dallas$LOCATION_DISTRICT, data_dallas$STREET_NUMBER)     # # converting to data.frame
+
+
+corr <- cor.test(data_dallas$LOCATION_DISTRICT, data_dallas$STREET_NUMBER)  #correlation
+
+print(corr)
+
+
+ggplot(abcd, aes(x = data_dallas$LOCATION_DISTRICT, y = data_dallas$STREET_NUMBER)) + 
+  geom_point() + 
+  geom_smooth(formula = 'y ~ x', method = "lm", se = TRUE) + 
+  labs(x="Location District", y= "Street Number", title="Correlation Plot") + 
+  theme(plot.title = element_text(hjust = 0.5)) + ylim(0,20000)                   #ggplot
+
+```
+  
+  The **bar plot** here represents the Officer Race and the count of Reasons for force used on subject. This plot shows that active aggression by officers is maximum with other types of subject races. The officers used force on more american Indian subjects for doing other activities. American Indians did not carry any weapons and hence no force was used on them. The officers had to carry force for all subject races in similar counts because they had to be arrested. **Active Aggression, Arrest, Danger to self or others, Detention/Frisk, Other** and **property destruction** are the major reasons for using **force** on the subjects.
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center", fig.width=12, fig.height=8}
+
+
+ggplot(data_dallas,aes(x = OFFICER_RACE,fill = REASON_FOR_FORCE)) + 
+  geom_bar(position = "fill") +
+  labs(fill = "Legend") +
+  labs(x = "Officer Race", y = "Reasons for Force Used on Subject (Count)", title = "Reasons for Force Used on Subject") + 
+  theme(plot.title = element_text(hjust = 1)) + 
+  theme(plot.title = element_text(size = 16, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 12)) + 
+  theme(axis.title.y = element_text(size = 14)) + 
+  theme(axis.title.x = element_text(size = 14))       # ggplot bar
+ 
+```
+  
+  The **bar plot** here represents the Officer Race and type of force used on subject. This plot shows that the maximum type of force used on subject race of american Ind is baton strike/Open mode. The maximum types of force used on the subject are Baton Strike/Open Mode, Verbal command, Weapon display at Person, Leg restraint system and take down arm. Comparing all the subject races the maximum type of force used on them is verbal command and Weapon display art person followed by leg restraint and baton strike. This chart also indicates at what level the subject carries out the activities and what is that type of force used by an officer.
+  
+
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center", fig.width=12, fig.height=8}
+
+ggplot(data_dallas,aes(x = OFFICER_RACE,fill = TYPE_OF_FORCE_USED1)) + 
+  geom_bar(position = "fill") +
+  labs(fill = "Legend") +
+  labs(x = "Officer Race", y = "Type of Force Used on Subject (Count)", title = "Type of Force Used on Subject") + 
+  theme(plot.title = element_text(hjust = 1)) + 
+  theme(plot.title = element_text(size = 16, hjust = 0.5)) + 
+  theme(axis.text = element_text(size = 12)) + 
+  theme(axis.title.y = element_text(size = 14)) + 
+  theme(axis.title.x = element_text(size = 14))   # ggplot bar
+
+```
+  
+  This is an **interactive map** for the Dallas city. Here we are representing the incident which happens inside the city. They are represented by circle. Before plotting the maps we removed the NULL values from the **latitude** and **longitude** section. Data was cleaned and we then converted these latitudes and longitudes as numeric. Each incident reason was color coded. We then plotted circles inside the map using leaflet. Looking into the map we see that majority of the incident reasons were service calls. Most of them are concentrated in the central region. These were represented by blue circles. The region is set view to a longitude of **-96.797461** and a latitude of **32.782205**. The map gives an exact location of the incident reason that occurred. By looking into these maps the officers can be deployed to the exact location to look into the incident or address them.  
+  
+  
+  
+```{r message=TRUE, warning=TRUE, paged.print=TRUE, fig.align="center"}
+# Map and Interactive plot
+
+library(leaflet)
+
+data_dallas %>% filter(LOCATION_LATITUDE!="NA" & LOCATION_LONGITUDE!="NA") %>%
+  group_by(LOCATION_LATITUDE,LOCATION_LONGITUDE,INCIDENT_REASON ) -> cn5           # filter out NAs and groupby
+      
+cn5$LOCATION_LATITUDE <- as.numeric(cn5$LOCATION_LATITUDE)      # convert it to numeric
+cn5$LOCATION_LONGITUDE <- as.numeric(cn5$LOCATION_LONGITUDE)    # convert it to numeric
+
+
+pal <- colorFactor(
+  palette = c('cyan', 'blue', 'darkgreen', 'brown', 'orangered',"black", "violet", "mediumvioletred", 
+                   "green", "darkblue", "white", "darkred", "gold","lightblue"),
+  domain = cn5$INCIDENT_REASON
+) # Color coding
+
+
+m <- leaflet(cn5) %>%
+  addTiles() %>%
+  setView(lng = -96.797461, lat = 32.782205, zoom = 10)  # Set the initial view to Dallas, TX
+
+# Add markers for each incident
+m <- m %>% addCircles(lat = ~LOCATION_LATITUDE, lng = ~LOCATION_LONGITUDE, popup = ~INCIDENT_REASON, 
+                      color = ~pal(INCIDENT_REASON)) %>%
+  addLegend("bottomright", title = "INCIDENT REASON",
+            colors = c('cyan', 'blue', 'darkgreen', 'brown', 'orangered',"black", "violet", "mediumvioletred", 
+                   "green", "darkblue", "white", "darkred", "gold","lightblue"), labels = c("Arrest", "Service Call", "Other(In Narrative)","Crime in Progress","Call for Cover","Warrant Execution",
+  "Off-Duty Employment","Traffic Stop", "Suspicious Activity", "Pedestrian Stop","NULL", "Off-Duty Incident",
+  "Crowd Control","Accidental Discharge" ))
+
+m
+
+```
+  
+### Conclusion
+  
+  
+  On complete analysis of the data set we can come to a conclusion that blacks committed the most number of offences. The offences are majorly concentrated in the **central** division. Mostly **white officers** were in pursuit and caught the **black subjects**. Majority of the subject offences are Apprehension by Peace Officer Without Warrant and public Intoxication. The majority of the officers are of a young nature and most of the incidents have occurred in the month of February. Analysis shows that Incidents are decreasing over time looking into the trends of **2016**. Since the crimes are maximum in the central region, officers are also deployed in maximum numbers in the central region. The subjects who commit crimes majority of them are **mentally unstable**. While using force on subjects, the officers getting hospitalized are very minimum but the percentage of female officers getting injured is higher and the injury type is of abrasion/scrape. The maximum reason for force used on the subject is arrest and the maximum type of force used on subject is **verbal command** and weapon display art person. The service calls is one of the major incident reason which is majorly concentrated in the central region of the Dallas.  In **conclusion** crimes committed by blacks across the city are in a downward looking trend which is good sign.
+  
+  
+  
+
+### Reference
+
+https://www.kaggle.com/center-for-policing-equity/data-science-for-good
